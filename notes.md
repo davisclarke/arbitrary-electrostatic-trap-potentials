@@ -1,0 +1,1 @@
+$$\Phi(x)=\sum^{N}_{n=0}\frac{c_n}{n!}x^n$$
