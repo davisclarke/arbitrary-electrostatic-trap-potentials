@@ -8,28 +8,28 @@ class ArbitrarySymmetricPolynomialPotential():
     def __init__(self, nth_order:int, ) -> None:
         self.nth_order=nth_order
         self.coeffs= np.random.normal(scale=.05, size=(nth_order)) 
-        self.opt_args=[f'{param}' for param in self.coeffs]
+        self.opt_args=[f'c{param}' for param in range(self.coeffs.__len__())]
 
     def calc_static_pot(self,x:np.ndarray):
         # \sum^{N}_{n=0}\frac{c_n}{n!}x^n
-        Phi=np.sum([np.sum([(self.coeffs[n])
-                    *(np.power(xi,(2*n))) for n in range(self.coeffs.__len__())]) for xi in x])
+        Phi=np.sum([np.sum([(self.coeffs[int(n-1)])
+                    *(np.power(xi,(2*n))) for n in range(1, self.coeffs.__len__())]) for xi in x])
         return Phi
     
     def calc_static_jac(self,x:np.ndarray):
-        Phi_jac=np.array([np.sum([(self.coeffs[n]*(2*n))
-                    *(np.power(xi,(2*n-1))) for n in range(self.coeffs.__len__())]) for xi in x])
-        logger.info(f'jac: {Phi_jac.shape}')
+        Phi_jac=np.array([np.sum([(self.coeffs[int(n-1)]*(2*n))
+                    *(np.power(xi,(2*n-1))) for n in range(1, self.coeffs.__len__())]) for xi in x])
+        # logger.info(f'jac: {Phi_jac.shape}')
         return Phi_jac
     
     def calc_static_hess(self,x:np.ndarray):
-        Phi_hess=np.array([np.sum([(self.coeffs[n]*(2*n)*(2*n-1))
-                    *(np.power(xi,(2*n-2))) for n in range(self.coeffs.__len__())]) for xi in x])*np.identity(x.size)
+        Phi_hess=np.array([np.sum([(self.coeffs[int(n-1)]*(2*n)*(2*n-1))
+                    *np.power(xi,((2*n-2))) for n in range(1, self.coeffs.__len__())]) for xi in x])*np.identity(x.size)
         return Phi_hess
     
     def calc_coulomb(self,x:np.ndarray):
         """
-            Calc dimless Coulomb forces
+            Calc dimless Coulomb forces.
             Credit to Laird Egan
         """
         N = x.size #Number of ions
@@ -57,6 +57,10 @@ class ArbitrarySymmetricPolynomialPotential():
     def calcVhess(self, x:np.ndarray):
         #Calculate Hessian
         return self.calc_static_hess(x)+self.calc_coulomb(x)[2]
+    
+    def optimize_params(self, c:np.ndarray):
+        for i, p in enumerate(self.opt_args):
+            setattr(self, p, c[i])
 
 
 
