@@ -5,26 +5,31 @@ import math
 logging.basicConfig(level=logging.INFO)
 logger=logging.getLogger(__name__)
 class ArbitrarySymmetricPolynomialPotential():
-    def __init__(self, nth_order:int, ) -> None:
-        self.nth_order=nth_order
-        self.coeffs= np.random.normal(scale=.05, size=(nth_order)) 
-        self.opt_args=[f'c{param}' for param in range(self.coeffs.__len__())]
+    def __init__(self, nth_order:int, fsec:float=None ) -> None:
+       # assert (nth_order%2==0) #N must be even!
+        self.nth_order=int(nth_order/2)
+        self.coeffs= np.random.normal(loc=0, scale=1e-3, size=(self.nth_order))  
+        self.opt_args=[f'c{param}' for param in range(self.nth_order)]
+        self.init_attr()
+        logger.info(f'Opt args: {self.opt_args}')
 
     def calc_static_pot(self,x:np.ndarray):
         # \sum^{N}_{n=0}\frac{c_n}{n!}x^n
-        Phi=np.sum([np.sum([(self.coeffs[int(n-1)])
-                    *(np.power(xi,(2*n))) for n in range(1, self.coeffs.__len__())]) for xi in x])
+        Phi=np.sum([np.sum([(self.coeffs[int(n-1)]/math.factorial(2*n))
+                    *(pow(xi,(2*n))) for n in range(1, self.nth_order)]) for xi in x])
+        #logger.info(f'V: {Phi}')
         return Phi
     
     def calc_static_jac(self,x:np.ndarray):
-        Phi_jac=np.array([np.sum([(self.coeffs[int(n-1)]*(2*n))
-                    *(np.power(xi,(2*n-1))) for n in range(1, self.coeffs.__len__())]) for xi in x])
-        # logger.info(f'jac: {Phi_jac.shape}')
+        Phi_jac=np.array([np.sum([(self.coeffs[int(n-1)]*(2*n)/math.factorial(2*n))
+                    *(pow(xi,(2*n-1))) for n in range(1, self.nth_order)]) for xi in x])
+        #logger.info(f'jac V: {Phi_jac}')
         return Phi_jac
     
     def calc_static_hess(self,x:np.ndarray):
-        Phi_hess=np.array([np.sum([(self.coeffs[int(n-1)]*(2*n)*(2*n-1))
-                    *np.power(xi,((2*n-2))) for n in range(1, self.coeffs.__len__())]) for xi in x])*np.identity(x.size)
+        Phi_hess=np.array([np.sum([(self.coeffs[int(n-1)]*(2*n)*(2*n-1)/math.factorial(2*n))
+                    *pow(xi,((2*n-2))) for n in range(1, self.nth_order)]) for xi in x])*np.identity(x.size)
+        #logger.info(f'Hess: {Phi_hess}')
         return Phi_hess
     
     def calc_coulomb(self,x:np.ndarray):
@@ -48,19 +53,29 @@ class ArbitrarySymmetricPolynomialPotential():
     
     def calcV(self, x:np.ndarray):
         #Calculate potential
-        return self.calc_static_pot(x)+self.calc_coulomb(x)[0]
+        V=self.calc_static_pot(x)+self.calc_coulomb(x)[0]
+        return V
     
     def calcVjac(self, x:np.ndarray):
         #Calculate Jacobian
-        return self.calc_static_jac(x)+self.calc_coulomb(x)[1]
+        jac=self.calc_static_jac(x)+self.calc_coulomb(x)[1]
+        return jac
     
     def calcVhess(self, x:np.ndarray):
         #Calculate Hessian
-        return self.calc_static_hess(x)+self.calc_coulomb(x)[2]
+        hess= self.calc_static_hess(x)+self.calc_coulomb(x)[2]
+        return hess
     
     def optimize_params(self, c:np.ndarray):
         for i, p in enumerate(self.opt_args):
             setattr(self, p, c[i])
+    
+    def init_attr(self):
+        for n,param in enumerate(self.opt_args):
+            setattr(self, param, self.coeffs[n])
+    
+
+
 
 
 

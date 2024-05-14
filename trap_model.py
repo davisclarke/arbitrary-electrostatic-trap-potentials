@@ -21,7 +21,7 @@ class TrapModel():
 
         self.ion_pos=np.zeros(n_ions)
         self.l0=(k_e/(atomic_mass*M*(2*np.pi*omega_0)**2))**(1/3)
-
+        self.eVscale=4*np.pi*self.l0*epsilon_0/(electron_volt**2)
         
         #self.ion_pos=self.calc_ion_eq_pos()
     
@@ -29,35 +29,41 @@ class TrapModel():
 
     def calc_ion_eq_pos(self, verbose:bool=True):
         #No ion_pos yet set, assume equal spacing first guess. Other
-        if self.init_pot: init_pos_guess=np.linspace(-(self.n_ions), (self.n_ions), self.n_ions, dtype=np.float128)/self.l0
+        if self.init_pot: init_pos_guess=np.linspace(-(self.n_ions-1)/2, (self.n_ions-1)/2, self.n_ions,)
             
         res=minimize(self.V.calcV, init_pos_guess, hess=self.V.calcVhess, jac=self.V.calcVjac, method='trust-ncg', options={
             'disp':verbose, 'maxiter': 400})
         x=res['x']*self.l0
         #ogger.info(f'{res}')
-        self.ion_pos=np.reshape(x, self.ion_pos.shape, order="F")
+        ion_pos=np.reshape(x, self.ion_pos.shape, order="F")
+        return ion_pos
         
     
     def optimize_ion_pos(self, ideal_spacing:float, verbose:bool=True):
        """
        ideal_pos assumes equal spacing as ideal if no arg given
        """
-       ideal_pos=np.linspace(-(self.n_ions+1)/2, (self.n_ions-1)/2, self.n_ions )*ideal_spacing
-
+       ideal_pos=np.linspace(-(self.n_ions-1)/2, (self.n_ions-1)/2, self.n_ions )*ideal_spacing
+       logger.info(f'{ideal_pos}')
        c0=[]
        for p in self.V.opt_args:
            c0.append(getattr(self .V, p))
 
-       def c(cost): 
+       logger.info(f'{c0}')
+       def c(cost, args): 
            self.V.optimize_params(cost)
            pred_pos=self.calc_ion_eq_pos()
-           return np.sum(np.square(pred_pos-ideal_pos))
+           logger.info('{}'.format(pred_pos))
+           error=np.sum(np.square(pred_pos-ideal_pos))/(pred_pos.__len__())
+           logger.info(f'Err {error}')
+           return error
 
        def callback(cost):
            self.callback_hist.append(cost)
            
        options={'disp':verbose, 'maxiter':4000}    
-       res=minimize(c, c0, method='L-BFGS-B', callback=callback, options=options)
+       res=minimize(c, ideal_pos, method='L-BFGS-B', options=options, args=self.V.coeffs)
+       self.ion_pos=self.calc_ion_eq_pos()
 
     
     def initial_adiabatic_split(self, target_dist:int):
