@@ -5,13 +5,15 @@ import math
 logging.basicConfig(level=logging.INFO)
 logger=logging.getLogger(__name__)
 class ArbitrarySymmetricPolynomialPotential():
-    def __init__(self, nth_order:int, fsec:float=None ) -> None:
+    def __init__(self, coeffs:np.ndarray, fsec:float=None ) -> None:
        # assert (nth_order%2==0) #N must be even!
-        self.nth_order=int(nth_order/2)
-        self.coeffs= np.random.normal(loc=0, scale=1e-3, size=(self.nth_order))  
-        self.opt_args=[f'c{param}' for param in range(self.nth_order)]
-        self.init_attr()
-        logger.info(f'Opt args: {self.opt_args}')
+        self.coeffs=np.array(coeffs)
+        self.nth_order=self.coeffs.__len__()
+        logger.info(f'{self.nth_order}')
+        #self.coeffs=np.random.normal(0,.01,(nth_order))
+        self.opt_args=[f'coeffs']
+        #self.init_attr()
+        self.fsec=np.array(fsec)
 
     def calc_static_pot(self,x:np.ndarray):
         # \sum^{N}_{n=0}\frac{c_n}{n!}x^n
@@ -54,25 +56,25 @@ class ArbitrarySymmetricPolynomialPotential():
     def calcV(self, x:np.ndarray):
         #Calculate potential
         V=self.calc_static_pot(x)+self.calc_coulomb(x)[0]
+        self.V=V
         return V
     
     def calcVjac(self, x:np.ndarray):
         #Calculate Jacobian
         jac=self.calc_static_jac(x)+self.calc_coulomb(x)[1]
+        self.Vjac=jac
         return jac
     
     def calcVhess(self, x:np.ndarray):
         #Calculate Hessian
         hess= self.calc_static_hess(x)+self.calc_coulomb(x)[2]
+        self.Vhess=hess
         return hess
     
     def optimize_params(self, c:np.ndarray):
-        for i, p in enumerate(self.opt_args):
-            setattr(self, p, c[i])
-    
-    def init_attr(self):
-        for n,param in enumerate(self.opt_args):
-            setattr(self, param, self.coeffs[n])
+            setattr(self, 'coeffs', c)
+
+
     
 
 
